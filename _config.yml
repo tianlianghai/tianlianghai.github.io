@@ -1,0 +1,59 @@
+# Jekyll configuration for GitHub Pages
+title: Tian Lianghai - Computer Vision Researcher
+description: Professional GitHub Pages profile for Tian Lianghai, a Computer Vision Researcher based in Beijing, China
+author: Tian Lianghai
+email: tianlianghai@example.com
+
+# Site settings
+url: "https://tianlianghai.github.io"
+baseurl: ""
+
+# Build settings
+markdown: kramdown
+permalink: pretty
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Collections
+collections:
+  posts:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  -
+    scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+      author: "Tian Lianghai"
+
+# Social media links
+social:
+  github: tianlianghai
+  linkedin: tianlianghai
+  email: tianlianghai@example.com
+
+# Analytics (optional)
+# google_analytics: YOUR-GA-TRACKING-ID
+
+# GitHub Pages
+github:
+  repository_url: https://github.com/tianlianghai/tianlianghai.github.io
+  repository_name: tianlianghai.github.io
+  is_project_page: false
