@@ -26,6 +26,7 @@ class BlogManager {
         this.renderBlogList();
         await this.checkAdminStatus();
         this.setupAuthListener();
+        this.openSidebarByDefault();
     }
 
     async checkAdminStatus() {
@@ -297,6 +298,13 @@ class BlogManager {
         const mainContent = document.getElementById('mainContent');
         if (sidebar) sidebar.classList.remove('active');
         if (mainContent) mainContent.classList.remove('shifted');
+    }
+
+    openSidebarByDefault() {
+        const sidebar = document.getElementById('blogSidebar');
+        const mainContent = document.getElementById('mainContent');
+        if (sidebar) sidebar.classList.add('active');
+        if (mainContent) mainContent.classList.add('shifted');
     }
 
     showBlogModal(blog = null) {
@@ -635,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add contact form validation (if form exists)
-    const contactForm = document.querySelector('form');
+    const contactForm = document.querySelector('#contactForm');
     if (contactForm) {
         contactForm.addEventListener('submit', function(e) {
             e.preventDefault();
