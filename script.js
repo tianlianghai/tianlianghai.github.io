@@ -1,8 +1,8 @@
 // Blog System
 const BLOG_CONFIG = {
-    SUPABASE_URL: 'YOUR_SUPABASE_URL',
-    SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
-    ADMIN_EMAIL: 'your-email@example.com'
+    SUPABASE_URL: 'https://nleaipaprfwasggupjiv.supabase.co',
+    SUPABASE_ANON_KEY: 'sb_publishable_Szkx42x9ynwWv14IGWEUCg_fNJTb1_L',
+    ADMIN_EMAIL: 'tianlianghai@foxmail.com'
 };
 
 const supabaseClient = window.supabase && !BLOG_CONFIG.SUPABASE_URL.includes('YOUR_')
