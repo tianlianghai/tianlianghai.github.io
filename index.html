@@ -9,12 +9,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Universe Background GIF -->
-    <div class="universe-background">
-        <img src="https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif" alt="Universe" class="universe-gif">
-    </div>
-    
     <div class="container">
+        <!-- Blog Sidebar Toggle Button -->
+        <button class="blog-sidebar-toggle" id="blogSidebarToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Blog Sidebar -->
+        <aside class="blog-sidebar" id="blogSidebar">
+            <div class="blog-sidebar-header">
+                <h3><i class="fas fa-blog"></i> Blog</h3>
+                <button class="blog-sidebar-close" id="blogSidebarClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="blog-sidebar-content">
+                <div class="blog-actions">
+                    <button class="btn btn-primary btn-sm" id="newBlogBtn">
+                        <i class="fas fa-plus"></i> New Blog
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="blogHomeBtn">
+                        <i class="fas fa-home"></i> Blog Home
+                    </button>
+                </div>
+                
+                <div class="blog-tree" id="blogTree">
+                    <h4>Blog Posts</h4>
+                    <div id="blogList"></div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
         <!-- Header Section -->
         <header class="header">
             <div class="profile-info">
@@ -220,12 +248,71 @@
                 </div>
             </div>
         </section>
+    </main>
+    </div>
+
+    <!-- Blog Modal -->
+    <div class="modal" id="blogModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create New Blog Post</h2>
+                <button class="modal-close" id="modalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="blogForm">
+                    <div class="form-group">
+                        <label for="blogTitle">Title</label>
+                        <input type="text" id="blogTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="blogDate">Date</label>
+                        <input type="date" id="blogDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="blogTags">Tags (comma-separated)</label>
+                        <input type="text" id="blogTags" placeholder="computer-vision, research, tutorial">
+                    </div>
+                    <div class="form-group">
+                        <label for="blogContent">Content (Markdown supported)</label>
+                        <textarea id="blogContent" rows="15" required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Blog</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Content Display -->
+    <div class="blog-content-display" id="blogContentDisplay" style="display: none;">
+        <div class="blog-header">
+            <button class="btn btn-secondary" id="backToHome">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <div class="blog-actions-display">
+                <button class="btn btn-primary btn-sm" id="editBlogBtn" style="display: none;">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-danger btn-sm" id="deleteBlogBtn" style="display: none;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+        <article class="blog-article" id="blogArticle">
+            <!-- Blog content will be loaded here -->
+        </article>
     </div>
 
     <footer class="footer">
         <p>&copy; 2024 Tian Lianghai. All rights reserved.</p>
     </footer>
 
+    <!-- Include marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

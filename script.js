@@ -1,5 +1,364 @@
-// Smooth scrolling for navigation links
+// Blog System
+class BlogManager {
+    constructor() {
+        this.blogs = [];
+        this.currentBlog = null;
+        this.isAdmin = false;
+        this.init();
+    }
+
+    init() {
+        this.loadBlogs();
+        this.setupEventListeners();
+        this.renderBlogList();
+        this.checkAdminStatus();
+    }
+
+    checkAdminStatus() {
+        // Simple admin check using localStorage
+        const adminToken = localStorage.getItem('blogAdminToken');
+        this.isAdmin = adminToken === 'tianlianghai-blog-admin-2026';
+    }
+
+    setupEventListeners() {
+        // Sidebar toggle
+        const toggleBtn = document.getElementById('blogSidebarToggle');
+        const sidebar = document.getElementById('blogSidebar');
+        const closeBtn = document.getElementById('blogSidebarClose');
+        const mainContent = document.getElementById('mainContent');
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            mainContent.classList.add('shifted');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            mainContent.classList.remove('shifted');
+        });
+
+        // New blog button
+        const newBlogBtn = document.getElementById('newBlogBtn');
+        if (newBlogBtn) {
+            newBlogBtn.addEventListener('click', () => {
+                if (this.isAdmin) {
+                    this.showBlogModal();
+                } else {
+                    this.showAdminLogin();
+                }
+            });
+        }
+
+        // Blog home button
+        const blogHomeBtn = document.getElementById('blogHomeBtn');
+        if (blogHomeBtn) {
+            blogHomeBtn.addEventListener('click', () => {
+                this.showBlogHome();
+            });
+        }
+
+        // Modal controls
+        const modal = document.getElementById('blogModal');
+        const modalClose = document.getElementById('modalClose');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const blogForm = document.getElementById('blogForm');
+
+        modalClose.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+
+        blogForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveBlog();
+        });
+
+        // Blog content display controls
+        const backToHome = document.getElementById('backToHome');
+        const editBlogBtn = document.getElementById('editBlogBtn');
+        const deleteBlogBtn = document.getElementById('deleteBlogBtn');
+
+        if (backToHome) {
+            backToHome.addEventListener('click', () => {
+                this.hideBlogContent();
+            });
+        }
+
+        if (editBlogBtn) {
+            editBlogBtn.addEventListener('click', () => {
+                this.editCurrentBlog();
+            });
+        }
+
+        if (deleteBlogBtn) {
+            deleteBlogBtn.addEventListener('click', () => {
+                this.deleteCurrentBlog();
+            });
+        }
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    }
+
+    loadBlogs() {
+        // Try to load from localStorage first (for new blogs)
+        const storedBlogs = localStorage.getItem('blogs');
+        if (storedBlogs) {
+            this.blogs = JSON.parse(storedBlogs);
+        } else {
+            // Load initial blogs from the blogs directory
+            this.loadInitialBlogs();
+        }
+    }
+
+    async loadInitialBlogs() {
+        // For static GitHub Pages, we'll hardcode the initial blogs
+        // In a real implementation, you might use GitHub API or generate this dynamically
+        this.blogs = [
+            {
+                id: '2026-01-10-welcome-to-my-blog',
+                title: 'My First Blog Post',
+                date: '2026-01-10',
+                content: '# Welcome to My Blog\n\nThis is my first blog post on my GitHub Pages site. I\'m excited to share my thoughts and experiences about computer vision, deep learning, and technology.\n\n## Why I Started This Blog\n\nI wanted to create a space where I could:\n- Share my research findings\n- Document my learning journey\n- Connect with other researchers and developers\n- Showcase my projects and achievements\n\n## What to Expect\n\nIn this blog, you\'ll find posts about:\n- Computer vision research\n- Deep learning tutorials\n- Project updates\n- Industry insights\n\nStay tuned for more content!',
+                tags: ['introduction', 'blog', 'computer-vision'],
+                author: 'Tian Lianghai'
+            },
+            {
+                id: '2026-01-08-understanding-optical-flow',
+                title: 'Understanding Optical Flow in Computer Vision',
+                date: '2026-01-08',
+                content: '# Understanding Optical Flow in Computer Vision\n\nOptical flow is one of the fundamental concepts in computer vision that deals with the motion of objects between consecutive frames in a video sequence.\n\n## What is Optical Flow?\n\nOptical flow is the pattern of apparent motion of objects between two consecutive frames caused by the movement of object or camera. It\'s a 2D vector field where each vector is a displacement vector showing the movement of points from first frame to second.\n\n## Applications\n\n- **Video Compression**: Motion estimation for efficient encoding\n- **Object Tracking**: Following objects across frames\n- **Autonomous Driving**: Understanding motion patterns\n- **Medical Imaging**: Analyzing blood flow and organ movement\n\n## Key Algorithms\n\n### Lucas-Kanade Method\n- Assumes constant flow within a small neighborhood\n- Works well for small displacements\n- Computationally efficient\n\n### Horn-Schunck Method\n- Global optimization approach\n- Adds smoothness constraint\n- Handles larger displacements better\n\n## Recent Advances\n\nWith the advent of deep learning, optical flow estimation has seen significant improvements:\n\n- **FlowNet**: First end-to-end deep learning approach\n- **PWC-Net**: Pyramid warping and cost volume\n- **RAFT**: Recurrent all-pairs field transforms\n- **FlowDiffuser**: My recent work using diffusion models\n\n## Challenges\n\n1. **Occlusions**: Handling areas that become visible or hidden\n2. **Large Displacements**: Tracking fast-moving objects\n3. **Textureless Regions**: Estimating flow in uniform areas\n4. **Real-time Requirements**: Balancing accuracy and speed\n\n## Future Directions\n\nThe field is moving towards:\n- Self-supervised learning approaches\n- Real-time performance on edge devices\n- Integration with 3D reconstruction\n- Multi-modal optical flow\n\nOptical flow continues to be an active area of research with many exciting developments on the horizon.',
+                tags: ['optical-flow', 'computer-vision', 'research', 'deep-learning'],
+                author: 'Tian Lianghai'
+            }
+        ];
+        this.saveBlogs();
+    }
+
+    saveBlogs() {
+        localStorage.setItem('blogs', JSON.stringify(this.blogs));
+    }
+
+    renderBlogList() {
+        const blogList = document.getElementById('blogList');
+        if (!blogList) return;
+
+        // Sort blogs by date (newest first)
+        const sortedBlogs = [...this.blogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        blogList.innerHTML = sortedBlogs.map(blog => `
+            <div class="blog-item" data-blog-id="${blog.id}">
+                <div class="blog-item-title">${blog.title}</div>
+                <div class="blog-item-date">${this.formatDate(blog.date)}</div>
+                <div class="blog-item-tags">
+                    ${blog.tags.map(tag => `<span class="blog-tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+        `).join('');
+
+        // Add click listeners to blog items
+        blogList.querySelectorAll('.blog-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const blogId = item.dataset.blogId;
+                this.viewBlog(blogId);
+            });
+        });
+    }
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+    }
+
+    viewBlog(blogId) {
+        const blog = this.blogs.find(b => b.id === blogId);
+        if (!blog) return;
+
+        this.currentBlog = blog;
+        this.displayBlogContent(blog);
+    }
+
+    displayBlogContent(blog) {
+        const blogContentDisplay = document.getElementById('blogContentDisplay');
+        const blogArticle = document.getElementById('blogArticle');
+        const editBtn = document.getElementById('editBlogBtn');
+        const deleteBtn = document.getElementById('deleteBlogBtn');
+
+        if (!blogContentDisplay || !blogArticle) return;
+
+        // Convert markdown to HTML
+        const htmlContent = marked.parse(blog.content);
+
+        blogArticle.innerHTML = `
+            <h1>${blog.title}</h1>
+            <div class="blog-meta">
+                <p><strong>By:</strong> ${blog.author}</p>
+                <p><strong>Date:</strong> ${this.formatDate(blog.date)}</p>
+                <div class="blog-tags">
+                    ${blog.tags.map(tag => `<span class="blog-tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+            <div class="blog-content">
+                ${htmlContent}
+            </div>
+        `;
+
+        // Show/hide admin buttons
+        if (editBtn && deleteBtn) {
+            if (this.isAdmin) {
+                editBtn.style.display = 'inline-flex';
+                deleteBtn.style.display = 'inline-flex';
+            } else {
+                editBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+            }
+        }
+
+        blogContentDisplay.style.display = 'block';
+    }
+
+    hideBlogContent() {
+        const blogContentDisplay = document.getElementById('blogContentDisplay');
+        if (blogContentDisplay) {
+            blogContentDisplay.style.display = 'none';
+        }
+        this.currentBlog = null;
+    }
+
+    showBlogHome() {
+        this.hideBlogContent();
+        // Close sidebar and show main content
+        const sidebar = document.getElementById('blogSidebar');
+        const mainContent = document.getElementById('mainContent');
+        if (sidebar) sidebar.classList.remove('active');
+        if (mainContent) mainContent.classList.remove('shifted');
+    }
+
+    showBlogModal(blog = null) {
+        const modal = document.getElementById('blogModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const form = document.getElementById('blogForm');
+
+        if (!modal || !form) return;
+
+        if (blog) {
+            // Edit mode
+            modalTitle.textContent = 'Edit Blog Post';
+            document.getElementById('blogTitle').value = blog.title;
+            document.getElementById('blogDate').value = blog.date;
+            document.getElementById('blogTags').value = blog.tags.join(', ');
+            document.getElementById('blogContent').value = blog.content;
+            form.dataset.editId = blog.id;
+        } else {
+            // Create mode
+            modalTitle.textContent = 'Create New Blog Post';
+            form.reset();
+            document.getElementById('blogDate').value = new Date().toISOString().split('T')[0];
+            delete form.dataset.editId;
+        }
+
+        modal.classList.add('active');
+    }
+
+    saveBlog() {
+        const form = document.getElementById('blogForm');
+        const editId = form.dataset.editId;
+
+        const title = document.getElementById('blogTitle').value;
+        const date = document.getElementById('blogDate').value;
+        const tags = document.getElementById('blogTags').value
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag);
+        const content = document.getElementById('blogContent').value;
+
+        if (editId) {
+            // Update existing blog
+            const blogIndex = this.blogs.findIndex(b => b.id === editId);
+            if (blogIndex !== -1) {
+                this.blogs[blogIndex] = {
+                    ...this.blogs[blogIndex],
+                    title,
+                    date,
+                    tags,
+                    content
+                };
+            }
+        } else {
+            // Create new blog
+            const id = `${date}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
+            const newBlog = {
+                id,
+                title,
+                date,
+                tags,
+                content,
+                author: 'Tian Lianghai'
+            };
+            this.blogs.push(newBlog);
+        }
+
+        this.saveBlogs();
+        this.renderBlogList();
+        
+        // Close modal
+        document.getElementById('blogModal').classList.remove('active');
+
+        // If we were editing a blog, refresh the display
+        if (editId && this.currentBlog && this.currentBlog.id === editId) {
+            const updatedBlog = this.blogs.find(b => b.id === editId);
+            this.displayBlogContent(updatedBlog);
+        }
+    }
+
+    editCurrentBlog() {
+        if (this.currentBlog) {
+            this.showBlogModal(this.currentBlog);
+        }
+    }
+
+    deleteCurrentBlog() {
+        if (!this.currentBlog) return;
+
+        if (confirm(`Are you sure you want to delete "${this.currentBlog.title}"?`)) {
+            const blogIndex = this.blogs.findIndex(b => b.id === this.currentBlog.id);
+            if (blogIndex !== -1) {
+                this.blogs.splice(blogIndex, 1);
+                this.saveBlogs();
+                this.renderBlogList();
+                this.hideBlogContent();
+            }
+        }
+    }
+
+    showAdminLogin() {
+        const password = prompt('Enter admin password to create blog posts:');
+        if (password === 'tianlianghai2026') {
+            this.isAdmin = true;
+            localStorage.setItem('blogAdminToken', 'tianlianghai-blog-admin-2026');
+            this.showBlogModal();
+        } else if (password !== null) {
+            alert('Incorrect password. Only the site owner can create blog posts.');
+        }
+    }
+}
+
+// Initialize blog system when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize blog system
+    window.blogManager = new BlogManager();
+
     // Add smooth scrolling to all links
     const links = document.querySelectorAll('a[href^="#"]');
     
