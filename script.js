@@ -1,23 +1,69 @@
 // Blog System
+const BLOG_CONFIG = {
+    SUPABASE_URL: 'YOUR_SUPABASE_URL',
+    SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
+    ADMIN_EMAIL: 'your-email@example.com'
+};
+
+const supabaseClient = window.supabase && !BLOG_CONFIG.SUPABASE_URL.includes('YOUR_')
+    ? window.supabase.createClient(BLOG_CONFIG.SUPABASE_URL, BLOG_CONFIG.SUPABASE_ANON_KEY)
+    : null;
+
 class BlogManager {
     constructor() {
         this.blogs = [];
         this.currentBlog = null;
         this.isAdmin = false;
+        this.user = null;
+        this.supabase = supabaseClient;
+        this.useLocalStorage = !this.supabase;
         this.init();
     }
 
-    init() {
-        this.loadBlogs();
+    async init() {
+        await this.loadBlogs();
         this.setupEventListeners();
         this.renderBlogList();
-        this.checkAdminStatus();
+        await this.checkAdminStatus();
+        this.setupAuthListener();
     }
 
-    checkAdminStatus() {
-        // Simple admin check using localStorage
-        const adminToken = localStorage.getItem('blogAdminToken');
-        this.isAdmin = adminToken === 'tianlianghai-blog-admin-2026';
+    async checkAdminStatus() {
+        if (this.useLocalStorage) {
+            const adminToken = localStorage.getItem('blogAdminToken');
+            this.isAdmin = adminToken === 'tianlianghai-blog-admin-2026';
+            return;
+        }
+
+        const { data, error } = await this.supabase.auth.getUser();
+        if (error) {
+            console.log('Supabase auth error:', error);
+        }
+        this.user = data?.user || null;
+        this.isAdmin = !!this.user && this.user.email === BLOG_CONFIG.ADMIN_EMAIL;
+    }
+
+    setupAuthListener() {
+        if (this.useLocalStorage) return;
+        this.supabase.auth.onAuthStateChange((_event, session) => {
+            this.user = session?.user || null;
+            this.isAdmin = !!this.user && this.user.email === BLOG_CONFIG.ADMIN_EMAIL;
+            this.updateAdminUi();
+        });
+    }
+
+    updateAdminUi() {
+        const editBtn = document.getElementById('editBlogBtn');
+        const deleteBtn = document.getElementById('deleteBlogBtn');
+        if (editBtn && deleteBtn) {
+            if (this.isAdmin) {
+                editBtn.style.display = 'inline-flex';
+                deleteBtn.style.display = 'inline-flex';
+            } else {
+                editBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+            }
+        }
     }
 
     setupEventListeners() {
@@ -107,15 +153,30 @@ class BlogManager {
         });
     }
 
-    loadBlogs() {
-        // Try to load from localStorage first (for new blogs)
-        const storedBlogs = localStorage.getItem('blogs');
-        if (storedBlogs) {
-            this.blogs = JSON.parse(storedBlogs);
-        } else {
-            // Load initial blogs from the blogs directory
-            this.loadInitialBlogs();
+    async loadBlogs() {
+        if (this.useLocalStorage) {
+            const storedBlogs = localStorage.getItem('blogs');
+            if (storedBlogs) {
+                this.blogs = JSON.parse(storedBlogs);
+            } else {
+                await this.loadInitialBlogs();
+            }
+            return;
         }
+
+        const { data, error } = await this.supabase
+            .from('blogs')
+            .select('*');
+
+        if (error) {
+            console.log('Error loading blogs:', error);
+            return;
+        }
+
+        this.blogs = (data || []).map(blog => ({
+            ...blog,
+            tags: Array.isArray(blog.tags) ? blog.tags : []
+        }));
     }
 
     async loadInitialBlogs() {
@@ -143,7 +204,9 @@ class BlogManager {
     }
 
     saveBlogs() {
-        localStorage.setItem('blogs', JSON.stringify(this.blogs));
+        if (this.useLocalStorage) {
+            localStorage.setItem('blogs', JSON.stringify(this.blogs));
+        }
     }
 
     renderBlogList() {
@@ -214,16 +277,7 @@ class BlogManager {
             </div>
         `;
 
-        // Show/hide admin buttons
-        if (editBtn && deleteBtn) {
-            if (this.isAdmin) {
-                editBtn.style.display = 'inline-flex';
-                deleteBtn.style.display = 'inline-flex';
-            } else {
-                editBtn.style.display = 'none';
-                deleteBtn.style.display = 'none';
-            }
-        }
+        this.updateAdminUi();
 
         blogContentDisplay.style.display = 'block';
     }
@@ -271,9 +325,14 @@ class BlogManager {
         modal.classList.add('active');
     }
 
-    saveBlog() {
+    async saveBlog() {
         const form = document.getElementById('blogForm');
         const editId = form.dataset.editId;
+
+        if (!this.isAdmin) {
+            alert('Please sign in to create or edit blog posts.');
+            return;
+        }
 
         const title = document.getElementById('blogTitle').value;
         const date = document.getElementById('blogDate').value;
@@ -285,15 +344,43 @@ class BlogManager {
 
         if (editId) {
             // Update existing blog
-            const blogIndex = this.blogs.findIndex(b => b.id === editId);
-            if (blogIndex !== -1) {
-                this.blogs[blogIndex] = {
-                    ...this.blogs[blogIndex],
-                    title,
-                    date,
-                    tags,
-                    content
-                };
+            if (this.useLocalStorage) {
+                const blogIndex = this.blogs.findIndex(b => b.id === editId);
+                if (blogIndex !== -1) {
+                    this.blogs[blogIndex] = {
+                        ...this.blogs[blogIndex],
+                        title,
+                        date,
+                        tags,
+                        content
+                    };
+                }
+            } else {
+                const { data, error } = await this.supabase
+                    .from('blogs')
+                    .update({
+                        title,
+                        date,
+                        tags,
+                        content
+                    })
+                    .eq('id', editId)
+                    .select()
+                    .single();
+
+                if (error) {
+                    alert('Failed to update blog post.');
+                    console.log('Supabase update error:', error);
+                    return;
+                }
+
+                const blogIndex = this.blogs.findIndex(b => b.id === editId);
+                if (blogIndex !== -1) {
+                    this.blogs[blogIndex] = {
+                        ...this.blogs[blogIndex],
+                        ...data
+                    };
+                }
             }
         } else {
             // Create new blog
@@ -306,7 +393,22 @@ class BlogManager {
                 content,
                 author: 'Tian Lianghai'
             };
-            this.blogs.push(newBlog);
+            if (this.useLocalStorage) {
+                this.blogs.push(newBlog);
+            } else {
+                const { data, error } = await this.supabase
+                    .from('blogs')
+                    .insert(newBlog)
+                    .select()
+                    .single();
+
+                if (error) {
+                    alert('Failed to create blog post.');
+                    console.log('Supabase insert error:', error);
+                    return;
+                }
+                this.blogs.push(data);
+            }
         }
 
         this.saveBlogs();
@@ -328,29 +430,77 @@ class BlogManager {
         }
     }
 
-    deleteCurrentBlog() {
+    async deleteCurrentBlog() {
         if (!this.currentBlog) return;
+        if (!this.isAdmin) {
+            alert('Please sign in to delete blog posts.');
+            return;
+        }
 
         if (confirm(`Are you sure you want to delete "${this.currentBlog.title}"?`)) {
-            const blogIndex = this.blogs.findIndex(b => b.id === this.currentBlog.id);
-            if (blogIndex !== -1) {
-                this.blogs.splice(blogIndex, 1);
-                this.saveBlogs();
+            if (this.useLocalStorage) {
+                const blogIndex = this.blogs.findIndex(b => b.id === this.currentBlog.id);
+                if (blogIndex !== -1) {
+                    this.blogs.splice(blogIndex, 1);
+                    this.saveBlogs();
+                    this.renderBlogList();
+                    this.hideBlogContent();
+                }
+            } else {
+                const { error } = await this.supabase
+                    .from('blogs')
+                    .delete()
+                    .eq('id', this.currentBlog.id);
+
+                if (error) {
+                    alert('Failed to delete blog post.');
+                    console.log('Supabase delete error:', error);
+                    return;
+                }
+
+                this.blogs = this.blogs.filter(b => b.id !== this.currentBlog.id);
                 this.renderBlogList();
                 this.hideBlogContent();
             }
         }
     }
 
-    showAdminLogin() {
-        const password = prompt('Enter admin password to create blog posts:');
-        if (password === 'tianlianghai2026') {
-            this.isAdmin = true;
-            localStorage.setItem('blogAdminToken', 'tianlianghai-blog-admin-2026');
-            this.showBlogModal();
-        } else if (password !== null) {
-            alert('Incorrect password. Only the site owner can create blog posts.');
+    async showAdminLogin() {
+        if (this.useLocalStorage) {
+            const password = prompt('Enter admin password to create blog posts:');
+            if (password === 'tianlianghai2026') {
+                this.isAdmin = true;
+                localStorage.setItem('blogAdminToken', 'tianlianghai-blog-admin-2026');
+                this.showBlogModal();
+            } else if (password !== null) {
+                alert('Incorrect password. Only the site owner can create blog posts.');
+            }
+            return;
         }
+
+        const email = prompt('Enter your admin email:');
+        if (!email) return;
+        const password = prompt('Enter your admin password:');
+        if (!password) return;
+
+        const { data, error } = await this.supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            alert('Sign-in failed. Check your email and password.');
+            console.log('Supabase sign-in error:', error);
+            return;
+        }
+
+        this.user = data?.user || null;
+        this.isAdmin = !!this.user && this.user.email === BLOG_CONFIG.ADMIN_EMAIL;
+        if (!this.isAdmin) {
+            alert('Signed in, but this user is not allowed to post.');
+            return;
+        }
+        this.showBlogModal();
     }
 }
 
